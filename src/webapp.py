@@ -13,6 +13,7 @@ from flask import Flask, request, jsonify, render_template_string
 from .lunar import (
     solar_to_lunar, year_sexagenary, year_zodiac,
     lunar_festival, solar_festival, LUNAR_DAY_NAMES,
+    LUNAR_FESTIVAL_INTRO,
 )
 from .solar_terms import get_solar_terms_for_month
 from .islamic import (
@@ -88,6 +89,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Micr
 .footer .today-info{font-weight:500;color:var(--text)}
 @media(max-width:520px){.grid{gap:2px;padding:2px 6px 12px}.cell{min-height:48px;border-radius:8px}.cell .solar{font-size:14px}.cell .lunar{font-size:9px}.title-group .ym{font-size:18px}}
 .loading{opacity:0.5;pointer-events:none;transition:opacity 0.15s}
+.festival-panel{display:none;margin:0 14px 12px;padding:14px 18px;background:var(--header-bg);border-radius:12px;border-left:4px solid var(--accent2)}
+.festival-panel.show{display:block}
+.festival-panel .fp-title{font-size:15px;font-weight:700;color:var(--accent2);margin-bottom:6px}
+.festival-panel .fp-date{font-size:11px;color:var(--text-dim);margin-bottom:8px}
+.festival-panel .fp-intro{font-size:12px;color:var(--text);line-height:1.7;text-align:justify}
+.festival-panel .fp-nav{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.festival-panel .fp-nav button{padding:4px 12px;border-radius:12px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:var(--text-dim);font-size:11px;cursor:pointer}
+.festival-panel .fp-nav button:hover,.festival-panel .fp-nav button.active{color:var(--accent2);border-color:var(--accent2)}
 </style></head><body>
 <div class="container">
 <div class="header">
@@ -109,6 +118,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Micr
 </div>
 <div class="weekdays"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>
 <div class="grid" id="g"></div>
+<div class="festival-panel" id="fp">
+  <div class="fp-title" id="fp-title"></div>
+  <div class="fp-date" id="fp-date"></div>
+  <div class="fp-intro" id="fp-intro"></div>
+  <div class="fp-nav" id="fp-nav"></div>
+</div>
 <div class="footer"><span class="hint">←→翻月 ↑↓翻年 1-4切历法 T今天 G跳转</span><span class="today-info" id="ti"></span></div>
 <dialog id="jd" style="border:none;border-radius:14px;padding:24px 28px;background:var(--header-bg);color:var(--text);box-shadow:0 20px 60px rgba(0,0,0,0.5);min-width:250px">
 <div style="font-size:16px;font-weight:700;margin-bottom:14px;text-align:center">跳转到</div>
@@ -145,6 +160,15 @@ async function load(){
     if(c.tag){const te=document.createElement("div");te.className="tag "+(c.tagType||"");te.textContent=c.tag;div.appendChild(te)}
     grid.appendChild(div)
   }grid.classList.remove("loading")
+  // 节日介绍面板
+  const fp=document.getElementById("fp"),ft=document.getElementById("fp-title"),fd=document.getElementById("fp-date"),fi=document.getElementById("fp-intro"),fn=document.getElementById("fp-nav");
+  if(d.festivals&&d.festivals.length>0){
+    fp.classList.add("show");showFestival(0);
+    function showFestival(idx){
+      const f=d.festivals[idx];ft.textContent=f.name+" 🎉";fd.textContent=f.date+"（"+f.gregorianDate+"）";fi.textContent=f.intro;fn.innerHTML="";
+      if(d.festivals.length>1){for(let i=0;i<d.festivals.length;i++){const btn=document.createElement("button");btn.textContent=d.festivals[i].name;if(i===idx)btn.classList.add("active");btn.onclick=()=>showFestival(i);fn.appendChild(btn)}}
+    }
+  }else{fp.classList.remove("show")}
 }
 
 function prevMonth(){cM--;if(cM<1){cM=12;cY--}load()}
@@ -297,6 +321,22 @@ def api_calendar():
     if cal_type == "chinese":
         result["sexagenary"] = year_sexagenary(year)
         result["zodiac"] = year_zodiac(year)
+        # 收集当月农历节日介绍
+        festivals_in_month = {}
+        for c in cells:
+            if c["day"] == 0:
+                continue
+            ld = solar_to_lunar(year, month, c["day"])
+            f = lunar_festival(ld)
+            if f and f in LUNAR_FESTIVAL_INTRO and f not in festivals_in_month:
+                festivals_in_month[f] = {
+                    "name": f,
+                    "date": f"农历{ld.month}月{ld.day}日",
+                    "gregorianDate": f"{year}年{month}月{c['day']}日",
+                    "intro": LUNAR_FESTIVAL_INTRO[f],
+                }
+        if festivals_in_month:
+            result["festivals"] = list(festivals_in_month.values())
     else:
         result["subtitle"] = subtitle or ""
 
