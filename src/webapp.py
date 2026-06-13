@@ -155,7 +155,8 @@ async function load(){
     if(c.day===0){div.classList.add("empty");grid.appendChild(div);continue}
     if(c.isToday)div.classList.add("today");
     if(c.weekday===6)div.classList.add("sunday");if(c.weekday===5)div.classList.add("saturday");
-    div.onclick=()=>{const dd=new Date(cY,cM-1,c.day);cY=dd.getFullYear();cM=dd.getMonth()+1;load()};
+    if(c.festivalName)div.setAttribute('data-festival',c.festivalName);
+    div.onclick=async()=>{const dd=new Date(cY,cM-1,c.day);cY=dd.getFullYear();cM=dd.getMonth()+1;await load();if(c.festivalName)switchToFestival(c.festivalName)};
     const se=document.createElement("div");se.className="solar";se.textContent=c.day;div.appendChild(se);
     const le=document.createElement("div");le.className="lunar";
     if(c.isSpecialLunar)le.classList.add("s"+cal);le.textContent=c.lunarDayName||"";div.appendChild(le);
@@ -163,14 +164,29 @@ async function load(){
     grid.appendChild(div)
   }grid.classList.remove("loading")
   // 节日介绍面板
-  const fp=document.getElementById("fp"),ft=document.getElementById("fp-title"),fd=document.getElementById("fp-date"),fi=document.getElementById("fp-intro"),fn=document.getElementById("fp-nav");
   if(d.festivals&&d.festivals.length>0){
-    fp.classList.add("show");showFestival(0);
-    function showFestival(idx){
-      const f=d.festivals[idx];ft.textContent=f.name+" 🎉";fd.textContent=f.date+"（"+f.gregorianDate+"）";fi.textContent=f.intro;fn.innerHTML="";
-      if(d.festivals.length>1){for(let i=0;i<d.festivals.length;i++){const btn=document.createElement("button");btn.textContent=d.festivals[i].name;if(i===idx)btn.classList.add("active");btn.onclick=()=>showFestival(i);fn.appendChild(btn)}}
-    }
-  }else{fp.classList.remove("show")}
+    _festivals=d.festivals;_festIdx=0;_renderFestival(0);
+  }else{_festivals=[];document.getElementById("fp").classList.remove("show")}
+}
+
+// 全局：通过节日名切换面板（日历格点击触发）
+let _festivals=[],_festIdx=0;
+function switchToFestival(name){
+  const idx=_festivals.findIndex(f=>f.name===name);
+  if(idx>=0){_festIdx=idx;_renderFestival(idx)}
+}
+function _renderFestival(idx){
+  if(!_festivals.length)return;
+  const f=_festivals[idx],fp=document.getElementById("fp");
+  fp.classList.add("show");fp.querySelector("#fp-title").textContent=f.name+" 🎉";
+  fp.querySelector("#fp-date").textContent=f.date+"（"+f.gregorianDate+"）";
+  fp.querySelector("#fp-intro").textContent=f.intro;
+  const fn=fp.querySelector("#fp-nav");fn.innerHTML="";
+  if(_festivals.length>1)for(let i=0;i<_festivals.length;i++){
+    const btn=document.createElement("button");btn.textContent=_festivals[i].name;
+    if(i===idx)btn.classList.add("active");
+    btn.onclick=()=>{_festIdx=i;_renderFestival(i)};fn.appendChild(btn)
+  }
 }
 
 function prevMonth(){cM--;if(cM<1){cM=12;cY--}load()}
@@ -205,9 +221,11 @@ def _build_islamic_cell(year, month, day, col_idx, is_today, term_map):
     tag_type = tags[0][1] if tags else ""
 
     hijri_year = idate.year
-    return {"day": day, "weekday": col_idx, "isToday": is_today,
-            "lunarDayName": day_name, "isSpecialLunar": is_special,
-            "tag": tag, "tagType": tag_type}, f"伊斯兰历 {hijri_year} AH"
+    result = {"day": day, "weekday": col_idx, "isToday": is_today,
+              "lunarDayName": day_name, "isSpecialLunar": is_special,
+              "tag": tag, "tagType": tag_type}
+    if ifest: result["festivalName"] = ifest
+    return result, f"伊斯兰历 {hijri_year} AH"
 
 
 def _build_japanese_cell(year, month, day, col_idx, is_today, term_map):
@@ -229,9 +247,11 @@ def _build_japanese_cell(year, month, day, col_idx, is_today, term_map):
     tag = "  ".join(t[0] for t in tags) if tags else None
     tag_type = tags[0][1] if tags and tags[0][1] else ""
 
-    return {"day": day, "weekday": col_idx, "isToday": is_today,
-            "lunarDayName": day_name, "isSpecialLunar": is_special,
-            "tag": tag, "tagType": tag_type}, f"{jd.era_name}和历  |  {wm}"
+    result = {"day": day, "weekday": col_idx, "isToday": is_today,
+              "lunarDayName": day_name, "isSpecialLunar": is_special,
+              "tag": tag, "tagType": tag_type}
+    if holiday: result["festivalName"] = holiday
+    return result, f"{jd.era_name}和历  |  {wm}"
 
 
 def _build_buddhist_cell(year, month, day, col_idx, is_today, term_map):
@@ -251,9 +271,11 @@ def _build_buddhist_cell(year, month, day, col_idx, is_today, term_map):
     tag = "  ".join(t[0] for t in tags) if tags else None
     tag_type = tags[0][1] if tags else ""
 
-    return {"day": day, "weekday": col_idx, "isToday": is_today,
-            "lunarDayName": day_name, "isSpecialLunar": is_special,
-            "tag": tag, "tagType": tag_type}, f"BE {bd.year}  |  {tn} ({tm})"
+    result = {"day": day, "weekday": col_idx, "isToday": is_today,
+              "lunarDayName": day_name, "isSpecialLunar": is_special,
+              "tag": tag, "tagType": tag_type}
+    if holiday: result["festivalName"] = holiday
+    return result, f"BE {bd.year}  |  {tn} ({tm})"
 
 
 def _build_chinese_cell(year, month, day, col_idx, is_today, term_map):
@@ -265,9 +287,11 @@ def _build_chinese_cell(year, month, day, col_idx, is_today, term_map):
     tag = None; tag_type = ""
     if term: tag = "╎ "+term; tag_type = "term"
     if festival: tag = (tag+"  " if tag else "") + "● "+festival; tag_type = "f0"
-    return {"day": day, "weekday": col_idx, "isToday": is_today,
-            "lunarDayName": day_name, "isSpecialLunar": is_special,
-            "tag": tag, "tagType": tag_type}, None
+    result = {"day": day, "weekday": col_idx, "isToday": is_today,
+              "lunarDayName": day_name, "isSpecialLunar": is_special,
+              "tag": tag, "tagType": tag_type}
+    if festival: result["festivalName"] = festival
+    return result, None
 
 
 BUILDERS = {
