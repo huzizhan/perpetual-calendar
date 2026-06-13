@@ -18,13 +18,15 @@ from .lunar import (
 from .solar_terms import get_solar_terms_for_month
 from .islamic import (
     gregorian_to_islamic, islamic_festival, islamic_month_special,
-    ISLAMIC_MONTH_NAMES_CN,
+    ISLAMIC_MONTH_NAMES_CN, ISLAMIC_FESTIVAL_INTRO,
 )
 from .japanese import (
     gregorian_to_japanese, japanese_holiday, rokuyo_name, month_wareki_name,
+    JAPANESE_HOLIDAY_INTRO,
 )
 from .buddhist import (
     gregorian_to_buddhist, thai_holiday, thai_month_name, thai_month_short,
+    BUDDHIST_FESTIVAL_INTRO,
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -318,27 +320,59 @@ def api_calendar():
             cells.append(cell)
 
     result = {"year": year, "month": month, "cells": cells}
+
+    # ── 收集当月节日介绍（所有历法类型） ──
+    festivals_in_month: dict[str, dict] = {}
     if cal_type == "chinese":
         result["sexagenary"] = year_sexagenary(year)
         result["zodiac"] = year_zodiac(year)
-        # 收集当月农历节日介绍
-        festivals_in_month = {}
         for c in cells:
-            if c["day"] == 0:
-                continue
+            if c["day"] == 0: continue
             ld = solar_to_lunar(year, month, c["day"])
             f = lunar_festival(ld)
             if f and f in LUNAR_FESTIVAL_INTRO and f not in festivals_in_month:
                 festivals_in_month[f] = {
-                    "name": f,
-                    "date": f"农历{ld.month}月{ld.day}日",
+                    "name": f, "date": f"农历{ld.month}月{ld.day}日",
                     "gregorianDate": f"{year}年{month}月{c['day']}日",
                     "intro": LUNAR_FESTIVAL_INTRO[f],
                 }
-        if festivals_in_month:
-            result["festivals"] = list(festivals_in_month.values())
-    else:
+    elif cal_type == "islamic":
         result["subtitle"] = subtitle or ""
+        for c in cells:
+            if c["day"] == 0: continue
+            idate = gregorian_to_islamic(year, month, c["day"])
+            f = islamic_festival(idate)
+            if f and f in ISLAMIC_FESTIVAL_INTRO and f not in festivals_in_month:
+                festivals_in_month[f] = {
+                    "name": f, "date": f"伊斯兰历{idate.month}月{idate.day}日",
+                    "gregorianDate": f"{year}年{month}月{c['day']}日",
+                    "intro": ISLAMIC_FESTIVAL_INTRO[f],
+                }
+    elif cal_type == "japanese":
+        result["subtitle"] = subtitle or ""
+        for c in cells:
+            if c["day"] == 0: continue
+            f = japanese_holiday(month, c["day"])
+            if f and f in JAPANESE_HOLIDAY_INTRO and f not in festivals_in_month:
+                festivals_in_month[f] = {
+                    "name": f, "date": f"{year}年{month}月{c['day']}日",
+                    "gregorianDate": f"{year}年{month}月{c['day']}日",
+                    "intro": JAPANESE_HOLIDAY_INTRO[f],
+                }
+    elif cal_type == "buddhist":
+        result["subtitle"] = subtitle or ""
+        for c in cells:
+            if c["day"] == 0: continue
+            f = thai_holiday(month, c["day"])
+            if f and f in BUDDHIST_FESTIVAL_INTRO and f not in festivals_in_month:
+                festivals_in_month[f] = {
+                    "name": f, "date": f"BE {year+543}年{month}月{c['day']}日",
+                    "gregorianDate": f"{year}年{month}月{c['day']}日",
+                    "intro": BUDDHIST_FESTIVAL_INTRO[f],
+                }
+
+    if festivals_in_month:
+        result["festivals"] = list(festivals_in_month.values())
 
     return jsonify(result)
 
