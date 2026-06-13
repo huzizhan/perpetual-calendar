@@ -1,6 +1,6 @@
 """
 万年历 Web 版 — Flask 后端 + 内嵌 HTML/CSS/JS
-在浏览器中查看交互式万年历。
+四历法统一：农历 / 伊斯兰历 / 日本和历 / 佛历
 """
 
 import calendar as cal_module
@@ -11,479 +11,301 @@ import logging
 from flask import Flask, request, jsonify, render_template_string
 
 from .lunar import (
-    solar_to_lunar,
-    lunar_date_str,
-    year_sexagenary,
-    year_zodiac,
-    lunar_festival,
-    solar_festival,
-    LUNAR_DAY_NAMES,
+    solar_to_lunar, year_sexagenary, year_zodiac,
+    lunar_festival, solar_festival, LUNAR_DAY_NAMES,
 )
 from .solar_terms import get_solar_terms_for_month
+from .islamic import (
+    gregorian_to_islamic, islamic_festival, islamic_month_special,
+    ISLAMIC_MONTH_NAMES_CN,
+)
+from .japanese import (
+    gregorian_to_japanese, japanese_holiday, rokuyo_name, month_wareki_name,
+)
+from .buddhist import (
+    gregorian_to_buddhist, thai_holiday, thai_month_name, thai_month_short,
+)
 
 logging.basicConfig(level=logging.INFO)
-
 app = Flask(__name__)
 
-# ─── HTML 页面（内嵌模板） ──────────────────────────────────
-
 PAGE_HTML = r"""<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>万年历</title>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>万年历</title>
 <style>
-  :root {
-    --bg: #1e1e2e;
-    --surface: #2a2a3a;
-    --header-bg: #313244;
-    --text: #cdd6f4;
-    --text-dim: #6c7086;
-    --accent: #89b4fa;
-    --accent2: #cba6f7;
-    --red: #f38ba8;
-    --yellow: #f9e2af;
-    --green: #a6e3a1;
-    --teal: #94e2d5;
-    --radius: 10px;
-    --transition: 0.2s ease;
-  }
+:root{--bg:#1e1e2e;--surface:#2a2a3a;--header-bg:#313244;--text:#cdd6f4;--text-dim:#6c7086;--accent:#89b4fa;--accent2:#cba6f7;--islamic:#fab387;--jp:#f38ba8;--buddha:#f9e2af;--red:#f38ba8;--yellow:#f9e2af;--green:#a6e3a1;--teal:#94e2d5;--radius:10px;--transition:0.2s ease}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;justify-content:center;align-items:center;padding:20px}
+.container{width:100%;max-width:820px;background:var(--surface);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.4);overflow:hidden}
+.header{display:flex;align-items:center;justify-content:center;gap:12px;padding:20px 24px 8px;background:var(--header-bg)}
+.nav-btn{width:40px;height:40px;border:none;border-radius:50%;background:rgba(255,255,255,0.08);color:var(--text);font-size:18px;cursor:pointer;transition:var(--transition);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.nav-btn:hover{background:rgba(255,255,255,0.18);transform:scale(1.05)}
+.title-group{text-align:center}
+.title-group .ym{font-size:24px;font-weight:700;color:var(--text);letter-spacing:2px}
+.title-group .gz{font-size:13px;margin-top:2px}
+.title-group .gz.c0{color:var(--accent2)}
+.title-group .gz.c1{color:var(--islamic)}
+.title-group .gz.c2{color:var(--jp)}
+.title-group .gz.c3{color:var(--buddha)}
 
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+.cal-toggle{display:flex;justify-content:center;gap:4px;padding:10px 24px 14px;background:var(--header-bg);flex-wrap:wrap}
+.cal-toggle button{padding:6px 13px;border:1px solid rgba(255,255,255,0.12);border-radius:20px;background:transparent;color:var(--text-dim);font-size:12px;cursor:pointer;transition:var(--transition)}
+.cal-toggle button:hover{color:var(--text);border-color:rgba(255,255,255,0.3)}
+.cal-toggle button.active{font-weight:700;color:#1e1e2e}
+.cal-toggle button.active.c0{background:var(--accent2);border-color:var(--accent2)}
+.cal-toggle button.active.c1{background:var(--islamic);border-color:var(--islamic)}
+.cal-toggle button.active.c2{background:var(--jp);border-color:var(--jp)}
+.cal-toggle button.active.c3{background:var(--buddha);border-color:var(--buddha)}
 
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
-                 "Microsoft YaHei", sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 20px;
-  }
+.quick-bar{display:flex;justify-content:center;gap:10px;padding:0 24px 14px;background:var(--header-bg)}
+.quick-btn{padding:5px 14px;border:1px solid rgba(255,255,255,0.10);border-radius:16px;background:transparent;color:var(--text-dim);font-size:12px;cursor:pointer;transition:var(--transition)}
+.quick-btn:hover{color:var(--text);border-color:rgba(255,255,255,0.25)}
 
-  .container {
-    width: 100%;
-    max-width: 780px;
-    background: var(--surface);
-    border-radius: 16px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
-    overflow: hidden;
-  }
+.weekdays{display:grid;grid-template-columns:repeat(7,1fr);padding:8px 20px 2px;font-size:12px;font-weight:600;text-align:center;color:var(--text-dim)}
+.weekdays span:nth-child(7){color:var(--red)}
+.weekdays span:nth-child(6){color:var(--accent)}
 
-  /* ── 顶部标题栏 ── */
-  .header {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
-    padding: 20px 24px 12px;
-    background: var(--header-bg);
-  }
-
-  .nav-btn {
-    width: 40px; height: 40px;
-    border: none; border-radius: 50%;
-    background: rgba(255,255,255,0.08);
-    color: var(--text);
-    font-size: 18px;
-    cursor: pointer;
-    transition: var(--transition);
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-  }
-  .nav-btn:hover { background: rgba(255,255,255,0.18); transform: scale(1.05); }
-  .nav-btn:active { transform: scale(0.95); }
-
-  .title-group { text-align: center; }
-  .title-group .ym {
-    font-size: 24px; font-weight: 700; color: var(--text);
-    letter-spacing: 2px;
-  }
-  .title-group .gz {
-    font-size: 14px; color: var(--accent2); margin-top: 3px;
-  }
-
-  /* ── 快捷按钮 ── */
-  .quick-bar {
-    display: flex; justify-content: center; gap: 10px;
-    padding: 8px 24px 16px;
-    background: var(--header-bg);
-  }
-  .quick-btn {
-    padding: 6px 16px;
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 20px;
-    background: transparent;
-    color: var(--text-dim);
-    font-size: 13px;
-    cursor: pointer;
-    transition: var(--transition);
-  }
-  .quick-btn:hover { color: var(--text); border-color: rgba(255,255,255,0.3); }
-
-  /* ── 星期标题 ── */
-  .weekdays {
-    display: grid; grid-template-columns: repeat(7, 1fr);
-    padding: 10px 20px 4px;
-    font-size: 13px; font-weight: 600;
-    text-align: center; color: var(--text-dim);
-  }
-  .weekdays span:nth-child(7) { color: var(--red); }
-  .weekdays span:nth-child(6) { color: var(--accent); }
-
-  /* ── 日历网格 ── */
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 3px; padding: 4px 14px 18px;
-  }
-
-  .cell {
-    aspect-ratio: 1;
-    border-radius: var(--radius);
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    cursor: pointer; transition: var(--transition);
-    position: relative; min-height: 72px;
-    background: var(--bg);
-  }
-  .cell:hover { background: rgba(255,255,255,0.06); }
-  .cell.empty { background: transparent; cursor: default; }
-  .cell.empty:hover { background: transparent; }
-
-  .cell .solar {
-    font-size: 18px; font-weight: 600; color: var(--text);
-    line-height: 1.3;
-  }
-  .cell .lunar {
-    font-size: 12px; color: var(--text-dim);
-    line-height: 1.3;
-  }
-  .cell .lunar.special { color: var(--accent2); font-weight: 600; }
-  .cell .tag {
-    font-size: 10px; margin-top: 1px;
-    white-space: nowrap; overflow: hidden;
-    text-overflow: ellipsis; max-width: 90%;
-  }
-  .cell .tag.term { color: var(--teal); }
-  .cell .tag.festival { color: var(--yellow); }
-
-  /* 周末列 */
-  .cell.sunday .solar { color: var(--red); }
-  .cell.saturday .solar { color: var(--accent); }
-
-  /* 今天 */
-  .cell.today {
-    background: var(--accent) !important;
-    box-shadow: 0 4px 16px rgba(137, 180, 250, 0.4);
-  }
-  .cell.today .solar { color: #1e1e2e; font-weight: 800; }
-  .cell.today .lunar { color: #1e1e2e; }
-  .cell.today .lunar.special { color: #1e1e2e; }
-  .cell.today .tag { color: #1e1e2e; }
-  .cell.today .tag.term,
-  .cell.today .tag.festival { color: #1e1e2e; }
-
-  /* ── 底部 ── */
-  .footer {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 12px 24px; background: var(--header-bg);
-    font-size: 13px; color: var(--text-dim);
-  }
-  .footer .today-info { font-weight: 500; color: var(--text); }
-  .footer .hint { font-size: 12px; }
-
-  /* ── 响应式 ── */
-  @media (max-width: 520px) {
-    .grid { gap: 2px; padding: 2px 6px 12px; }
-    .cell { min-height: 50px; border-radius: 8px; }
-    .cell .solar { font-size: 15px; }
-    .cell .lunar { font-size: 10px; }
-    .title-group .ym { font-size: 20px; }
-  }
-
-  /* ── 加载动画 ── */
-  .loading { opacity: 0.5; pointer-events: none; transition: opacity 0.15s; }
-</style>
-</head>
-<body>
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;padding:4px 14px 16px}
+.cell{aspect-ratio:1;border-radius:var(--radius);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:var(--transition);min-height:70px;background:var(--bg)}
+.cell:hover{background:rgba(255,255,255,0.06)}
+.cell.empty{background:transparent;cursor:default}.cell.empty:hover{background:transparent}
+.cell .solar{font-size:17px;font-weight:600;color:var(--text);line-height:1.2}
+.cell .lunar{font-size:11px;color:var(--text-dim);line-height:1.2}
+.cell .lunar.s0{color:var(--accent2);font-weight:600}
+.cell .lunar.s1{color:var(--islamic);font-weight:600}
+.cell .lunar.s2{color:var(--jp);font-weight:600}
+.cell .lunar.s3{color:var(--buddha);font-weight:600}
+.cell .tag{font-size:9px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:92%}
+.cell .tag.term{color:var(--teal)}
+.cell .tag.f0{color:var(--yellow)}
+.cell .tag.f1{color:var(--islamic)}
+.cell .tag.f2{color:var(--jp)}
+.cell .tag.f3{color:var(--buddha)}
+.cell.sunday .solar{color:var(--red)}
+.cell.saturday .solar{color:var(--accent)}
+.cell.today{background:var(--accent)!important;box-shadow:0 4px 16px rgba(137,180,250,0.4)}
+.cell.today .solar,.cell.today .lunar,.cell.today .tag{color:#1e1e2e!important}
+.footer{display:flex;align-items:center;justify-content:space-between;padding:10px 24px;background:var(--header-bg);font-size:12px;color:var(--text-dim)}
+.footer .today-info{font-weight:500;color:var(--text)}
+@media(max-width:520px){.grid{gap:2px;padding:2px 6px 12px}.cell{min-height:48px;border-radius:8px}.cell .solar{font-size:14px}.cell .lunar{font-size:9px}.title-group .ym{font-size:18px}}
+.loading{opacity:0.5;pointer-events:none;transition:opacity 0.15s}
+</style></head><body>
 <div class="container">
-  <!-- 标题栏 -->
-  <div class="header">
-    <button class="nav-btn" onclick="prevMonth()" title="上月 (←)">◀</button>
-    <button class="nav-btn" onclick="prevYear()" title="上年 (↑)">▲</button>
-    <div class="title-group">
-      <div class="ym" id="title-ym">2026 年  6 月</div>
-      <div class="gz" id="title-gz">丙午马年</div>
-    </div>
-    <button class="nav-btn" onclick="nextYear()" title="下年 (↓)">▼</button>
-    <button class="nav-btn" onclick="nextMonth()" title="下月 (→)">▶</button>
-  </div>
-
-  <!-- 快捷按钮 -->
-  <div class="quick-bar">
-    <button class="quick-btn" onclick="goToday()">📅 今天</button>
-    <button class="quick-btn" onclick="jumpDialog()">🔍 跳转</button>
-  </div>
-
-  <!-- 星期 -->
-  <div class="weekdays">
-    <span>一</span><span>二</span><span>三</span><span>四</span>
-    <span>五</span><span>六</span><span>日</span>
-  </div>
-
-  <!-- 日历网格 -->
-  <div class="grid" id="calendar-grid"></div>
-
-  <!-- 底部 -->
-  <div class="footer">
-    <span class="hint">←→ 翻月  ↑↓ 翻年  T 今天  G 跳转</span>
-    <span class="today-info" id="today-info"></span>
-  </div>
-
-  <!-- 跳转对话框 -->
-  <dialog id="jump-dialog" style="
-    border:none; border-radius:16px; padding:28px 32px;
-    background:var(--header-bg); color:var(--text);
-    box-shadow:0 20px 60px rgba(0,0,0,0.5);
-    min-width:260px;
-  ">
-    <div style="font-size:18px;font-weight:700;margin-bottom:16px;text-align:center;">跳转到</div>
-    <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;">
-      <label style="width:24px;">年</label>
-      <input id="jump-year" type="number" min="1900" max="2100"
-             style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);
-                    background:var(--bg);color:var(--text);font-size:15px;text-align:center;">
-    </div>
-    <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;">
-      <label style="width:24px;">月</label>
-      <input id="jump-month" type="number" min="1" max="12"
-             style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);
-                    background:var(--bg);color:var(--text);font-size:15px;text-align:center;">
-    </div>
-    <div style="display:flex;gap:10px;justify-content:flex-end;">
-      <button onclick="closeJump()" style="padding:8px 20px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);
-               background:transparent;color:var(--text);cursor:pointer;">取消</button>
-      <button onclick="doJump()" style="padding:8px 20px;border-radius:8px;border:none;
-               background:var(--accent);color:#1e1e2e;font-weight:600;cursor:pointer;">跳转</button>
-    </div>
-  </dialog>
+<div class="header">
+<button class="nav-btn" onclick="prevMonth()">◀</button>
+<button class="nav-btn" onclick="prevYear()">▲</button>
+<div class="title-group"><div class="ym" id="title-ym"></div><div class="gz" id="title-gz"></div></div>
+<button class="nav-btn" onclick="nextYear()">▼</button>
+<button class="nav-btn" onclick="nextMonth()">▶</button>
 </div>
-
+<div class="cal-toggle">
+<button id="b0" class="active c0" onclick="switchCal(0)">🇨🇳 农历·节气</button>
+<button id="b1" class="c1" onclick="switchCal(1)">🌙 伊斯兰历</button>
+<button id="b2" class="c2" onclick="switchCal(2)">🇯🇵 日本和历</button>
+<button id="b3" class="c3" onclick="switchCal(3)">🛕 佛历</button>
+</div>
+<div class="quick-bar">
+<button class="quick-btn" onclick="goToday()">📅 今天</button>
+<button class="quick-btn" onclick="jumpDialog()">🔍 跳转</button>
+</div>
+<div class="weekdays"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>
+<div class="grid" id="g"></div>
+<div class="footer"><span class="hint">←→翻月 ↑↓翻年 1-4切历法 T今天 G跳转</span><span class="today-info" id="ti"></span></div>
+<dialog id="jd" style="border:none;border-radius:14px;padding:24px 28px;background:var(--header-bg);color:var(--text);box-shadow:0 20px 60px rgba(0,0,0,0.5);min-width:250px">
+<div style="font-size:16px;font-weight:700;margin-bottom:14px;text-align:center">跳转到</div>
+<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><label style="width:22px">年</label><input id="jy" type="number" min="622" max="2100" style="flex:1;padding:7px 10px;border-radius:7px;border:1px solid rgba(255,255,255,0.2);background:var(--bg);color:var(--text);font-size:14px;text-align:center"></div>
+<div style="display:flex;gap:8px;align-items:center;margin-bottom:14px"><label style="width:22px">月</label><input id="jm" type="number" min="1" max="12" style="flex:1;padding:7px 10px;border-radius:7px;border:1px solid rgba(255,255,255,0.2);background:var(--bg);color:var(--text);font-size:14px;text-align:center"></div>
+<div style="display:flex;gap:8px;justify-content:flex-end"><button onclick="closeJump()" style="padding:7px 16px;border-radius:7px;border:1px solid rgba(255,255,255,0.2);background:transparent;color:var(--text);cursor:pointer;font-size:13px">取消</button><button onclick="doJump()" style="padding:7px 16px;border-radius:7px;border:none;background:var(--accent);color:#1e1e2e;font-weight:600;cursor:pointer;font-size:13px">跳转</button></div>
+</dialog>
+</div>
 <script>
-  // ── 状态 ──
-  let currentYear = {{ year }};
-  let currentMonth = {{ month }};
-  const todayStr = "{{ today }}";  // "2026-06-13"
-  const today = new Date(todayStr);
-  const WEEKDAYS = ["一","二","三","四","五","六","日"];
+const TYPES=["chinese","islamic","japanese","buddhist"];
+let cY={{year}},cM={{month}},cal=0;
+const today=new Date("{{today}}"),WD=["一","二","三","四","五","六","日"];
 
-  // ── 日历加载 ──
-  async function loadCalendar() {
-    const grid = document.getElementById("calendar-grid");
-    grid.classList.add("loading");
+function switchCal(n){cal=n;for(let i=0;i<4;i++){let b=document.getElementById("b"+i);b.className=cal===i?"active c"+i:"c"+i}load()}
 
-    const resp = await fetch(`/api/calendar?year=${currentYear}&month=${currentMonth}`);
-    const data = await resp.json();
+async function load(){
+  const grid=document.getElementById("g");grid.classList.add("loading");
+  const r=await fetch(`/api/calendar?year=${cY}&month=${cM}&type=${TYPES[cal]}`),d=await r.json();
+  document.getElementById("title-ym").textContent=`${d.year} 年  ${d.month} 月`;
+  const gz=document.getElementById("title-gz");
+  gz.textContent=d.subtitle||(d.sexagenary||"")+(d.zodiac||"")+"年"||"";
+  gz.className="gz c"+cal;
+  document.getElementById("ti").textContent=`今天: ${today.getFullYear()}年${today.getMonth()+1}月${today.getDate()}日 星期${WD[today.getDay()===0?6:today.getDay()-1]}`;
+  grid.innerHTML="";
+  for(const c of d.cells){
+    const div=document.createElement("div");div.className="cell";
+    if(c.day===0){div.classList.add("empty");grid.appendChild(div);continue}
+    if(c.isToday)div.classList.add("today");
+    if(c.weekday===6)div.classList.add("sunday");if(c.weekday===5)div.classList.add("saturday");
+    div.onclick=()=>{const dd=new Date(cY,cM-1,c.day);cY=dd.getFullYear();cM=dd.getMonth()+1;load()};
+    const se=document.createElement("div");se.className="solar";se.textContent=c.day;div.appendChild(se);
+    const le=document.createElement("div");le.className="lunar";
+    if(c.isSpecialLunar)le.classList.add("s"+cal);le.textContent=c.lunarDayName||"";div.appendChild(le);
+    if(c.tag){const te=document.createElement("div");te.className="tag "+(c.tagType||"");te.textContent=c.tag;div.appendChild(te)}
+    grid.appendChild(div)
+  }grid.classList.remove("loading")
+}
 
-    document.getElementById("title-ym").textContent =
-      `${data.year} 年  ${data.month} 月`;
-    document.getElementById("title-gz").textContent =
-      `${data.sexagenary}${data.zodiac}年`;
-
-    // 更新今天信息
-    const twd = WEEKDAYS[today.getDay() === 0 ? 6 : today.getDay() - 1];
-    document.getElementById("today-info").textContent =
-      `今天: ${today.getFullYear()}年${today.getMonth()+1}月${today.getDate()}日 星期${twd}`;
-
-    // 渲染格子
-    grid.innerHTML = "";
-    for (const cell of data.cells) {
-      const div = document.createElement("div");
-      div.className = "cell";
-
-      if (cell.day === 0) {
-        div.classList.add("empty");
-        grid.appendChild(div);
-        continue;
-      }
-
-      // 样式类
-      if (cell.isToday) div.classList.add("today");
-      if (cell.weekday === 6) div.classList.add("sunday");
-      if (cell.weekday === 5) div.classList.add("saturday");
-
-      // 点击跳转到该日期所在月份
-      div.onclick = () => {
-        const d = new Date(currentYear, currentMonth - 1, cell.day);
-        currentYear = d.getFullYear();
-        currentMonth = d.getMonth() + 1;
-        loadCalendar();
-      };
-
-      // 公历日期
-      const solarEl = document.createElement("div");
-      solarEl.className = "solar";
-      solarEl.textContent = cell.day;
-      div.appendChild(solarEl);
-
-      // 农历日期
-      const lunarEl = document.createElement("div");
-      lunarEl.className = "lunar";
-      if (cell.isSpecialLunar) lunarEl.classList.add("special");
-      lunarEl.textContent = cell.lunarDayName;
-      div.appendChild(lunarEl);
-
-      // 标签（节日/节气）
-      if (cell.tag) {
-        const tagEl = document.createElement("div");
-        tagEl.className = "tag " + cell.tagType;
-        tagEl.textContent = cell.tag;
-        div.appendChild(tagEl);
-      }
-
-      grid.appendChild(div);
-    }
-
-    grid.classList.remove("loading");
-  }
-
-  // ── 导航 ──
-  function prevMonth() { currentMonth--; if(currentMonth<1){currentMonth=12;currentYear--;} loadCalendar(); }
-  function nextMonth() { currentMonth++; if(currentMonth>12){currentMonth=1;currentYear++;} loadCalendar(); }
-  function prevYear()  { currentYear--; loadCalendar(); }
-  function nextYear()  { currentYear++; loadCalendar(); }
-  function goToday()   { currentYear=today.getFullYear(); currentMonth=today.getMonth()+1; loadCalendar(); }
-
-  function jumpDialog() {
-    document.getElementById("jump-year").value = currentYear;
-    document.getElementById("jump-month").value = currentMonth;
-    document.getElementById("jump-dialog").showModal();
-  }
-  function closeJump() { document.getElementById("jump-dialog").close(); }
-  function doJump() {
-    const y = parseInt(document.getElementById("jump-year").value);
-    const m = parseInt(document.getElementById("jump-month").value);
-    if (y >= 1900 && y <= 2100 && m >= 1 && m <= 12) {
-      currentYear = y; currentMonth = m; loadCalendar(); closeJump();
-    } else {
-      alert("年份: 1900–2100, 月份: 1–12");
-    }
-  }
-
-  // ── 键盘绑定 ──
-  document.addEventListener("keydown", e => {
-    if (e.target.tagName === "INPUT") return;
-    switch(e.key) {
-      case "ArrowLeft":  prevMonth(); break;
-      case "ArrowRight": nextMonth(); break;
-      case "ArrowUp":    prevYear();  break;
-      case "ArrowDown":  nextYear();  break;
-      case "t": case "T": goToday(); break;
-      case "g": case "G": jumpDialog(); break;
-    }
-  });
-
-  // 启动
-  loadCalendar();
+function prevMonth(){cM--;if(cM<1){cM=12;cY--}load()}
+function nextMonth(){cM++;if(cM>12){cM=1;cY++}load()}
+function prevYear(){cY--;load()}
+function nextYear(){cY++;load()}
+function goToday(){cY=today.getFullYear();cM=today.getMonth()+1;load()}
+function jumpDialog(){document.getElementById("jy").value=cY;document.getElementById("jm").value=cM;document.getElementById("jd").showModal()}
+function closeJump(){document.getElementById("jd").close()}
+function doJump(){const y=parseInt(document.getElementById("jy").value),m=parseInt(document.getElementById("jm").value);if(y>=622&&y<=2100&&m>=1&&m<=12){cY=y;cM=m;load();closeJump()}else{alert("年份: 622–2100, 月份: 1–12")}}
+document.addEventListener("keydown",e=>{if(e.target.tagName==="INPUT")return;switch(e.key){case"ArrowLeft":prevMonth();break;case"ArrowRight":nextMonth();break;case"ArrowUp":prevYear();break;case"ArrowDown":nextYear();break;case"t":case"T":goToday();break;case"g":case"G":jumpDialog();break;case"1":switchCal(0);break;case"2":switchCal(1);break;case"3":switchCal(2);break;case"4":switchCal(3);break}});
+load();
 </script>
-</body>
-</html>"""
+</body></html>"""
 
 
-# ─── API ────────────────────────────────────────────────────
+# ─── API ──────────────────────────────────────────────────
+
+def _build_islamic_cell(year, month, day, col_idx, is_today, term_map):
+    idate = gregorian_to_islamic(year, month, day)
+    day_name = f"{ISLAMIC_MONTH_NAMES_CN[idate.month-1][:4]} {idate.day}"
+    is_special = idate.day in (1, 10, 15)
+
+    ifest = islamic_festival(idate)
+    mspecial = islamic_month_special(idate)
+    term = term_map.get(day)
+    tags = []
+    if term: tags.append(("╎"+term, "term"))
+    if ifest: tags.append(("●"+ifest, "f1"))
+    if mspecial and not ifest: tags.append((mspecial, "f1"))
+    tag = "  ".join(t[0] for t in tags) if tags else None
+    tag_type = tags[0][1] if tags else ""
+
+    hijri_year = idate.year
+    return {"day": day, "weekday": col_idx, "isToday": is_today,
+            "lunarDayName": day_name, "isSpecialLunar": is_special,
+            "tag": tag, "tagType": tag_type}, f"伊斯兰历 {hijri_year} AH"
+
+
+def _build_japanese_cell(year, month, day, col_idx, is_today, term_map):
+    import datetime as dt
+    jd = gregorian_to_japanese(year, month, day)
+    day_name = jd.short_str()
+    is_special = jd.is_gannen or jd.day == 1
+
+    holiday = japanese_holiday(month, day)
+    term = term_map.get(day)
+    ry = rokuyo_name(dt.date(year, month, day))
+    wm = month_wareki_name(month)
+
+    tags = []
+    if term: tags.append(("╎"+term, "term"))
+    if holiday: tags.append(("●"+holiday, "f2"))
+    elif ry in ("大安","仏滅"): tags.append((ry, "f2"))
+    else: tags.append((ry, ""))
+    tag = "  ".join(t[0] for t in tags) if tags else None
+    tag_type = tags[0][1] if tags and tags[0][1] else ""
+
+    return {"day": day, "weekday": col_idx, "isToday": is_today,
+            "lunarDayName": day_name, "isSpecialLunar": is_special,
+            "tag": tag, "tagType": tag_type}, f"{jd.era_name}和历  |  {wm}"
+
+
+def _build_buddhist_cell(year, month, day, col_idx, is_today, term_map):
+    bd = gregorian_to_buddhist(year, month, day)
+    day_name = f"BE {bd.year}"
+    is_special = False
+
+    holiday = thai_holiday(month, day)
+    term = term_map.get(day)
+    tm = thai_month_short(month)
+    tn = thai_month_name(month)
+
+    tags = []
+    if term: tags.append(("╎"+term, "term"))
+    if holiday: tags.append(("●"+holiday, "f3"))
+    tag = "  ".join(t[0] for t in tags) if tags else None
+    tag_type = tags[0][1] if tags else ""
+
+    return {"day": day, "weekday": col_idx, "isToday": is_today,
+            "lunarDayName": day_name, "isSpecialLunar": is_special,
+            "tag": tag, "tagType": tag_type}, f"BE {bd.year}  |  {tn} ({tm})"
+
+
+def _build_chinese_cell(year, month, day, col_idx, is_today, term_map):
+    ld = solar_to_lunar(year, month, day)
+    day_name = LUNAR_DAY_NAMES[ld.day - 1]
+    is_special = day_name in ("初一", "十五")
+    festival = lunar_festival(ld) or solar_festival(month, day)
+    term = term_map.get(day)
+    tag = None; tag_type = ""
+    if term: tag = "╎ "+term; tag_type = "term"
+    if festival: tag = (tag+"  " if tag else "") + "● "+festival; tag_type = "f0"
+    return {"day": day, "weekday": col_idx, "isToday": is_today,
+            "lunarDayName": day_name, "isSpecialLunar": is_special,
+            "tag": tag, "tagType": tag_type}, None
+
+
+BUILDERS = {
+    "chinese": _build_chinese_cell,
+    "islamic": _build_islamic_cell,
+    "japanese": _build_japanese_cell,
+    "buddhist": _build_buddhist_cell,
+}
+
 
 @app.route("/")
 def index():
-    """主页"""
     today = datetime.date.today()
-    return render_template_string(
-        PAGE_HTML,
-        year=today.year,
-        month=today.month,
-        today=today.isoformat(),
-    )
+    return render_template_string(PAGE_HTML, year=today.year, month=today.month, today=today.isoformat())
 
 
 @app.route("/api/calendar")
 def api_calendar():
-    """返回指定年月的日历数据（JSON）"""
     try:
         year = int(request.args.get("year", datetime.date.today().year))
         month = int(request.args.get("month", datetime.date.today().month))
+        cal_type = request.args.get("type", "chinese")
     except (ValueError, TypeError):
         return jsonify({"error": "参数格式错误"}), 400
 
-    if year < 1900 or year > 2100:
-        return jsonify({"error": "年份超出范围 (1900–2100)"}), 400
+    if year < 622 or year > 2100:
+        return jsonify({"error": "年份超出范围"}), 400
     if month < 1 or month > 12:
-        return jsonify({"error": "月份超出范围 (1–12)"}), 400
+        return jsonify({"error": "月份超出范围"}), 400
 
     today = datetime.date.today()
-
-    # 日历矩阵
     cal = cal_module.Calendar(firstweekday=0)
     month_days = cal.monthdayscalendar(year, month)
-
-    # 节气
     terms = get_solar_terms_for_month(year, month)
     term_map: dict[int, str] = {t.day: t.name for t in terms}
 
+    builder = BUILDERS.get(cal_type, _build_chinese_cell)
     cells = []
-    for week_idx, week in enumerate(month_days):
+    subtitle = None
+
+    for week in month_days:
         for col_idx, day in enumerate(week):
             if day == 0:
                 cells.append({"day": 0})
                 continue
-
             is_today = (year == today.year and month == today.month and day == today.day)
+            cell, sub = builder(year, month, day, col_idx, is_today, term_map)
+            if subtitle is None:
+                subtitle = sub
+            cells.append(cell)
 
-            # 农历
-            ld = solar_to_lunar(year, month, day)
-            day_name = LUNAR_DAY_NAMES[ld.day - 1]
-            is_special = day_name in ("初一", "十五")
+    result = {"year": year, "month": month, "cells": cells}
+    if cal_type == "chinese":
+        result["sexagenary"] = year_sexagenary(year)
+        result["zodiac"] = year_zodiac(year)
+    else:
+        result["subtitle"] = subtitle or ""
 
-            # 标签
-            festival = lunar_festival(ld) or solar_festival(month, day)
-            term = term_map.get(day)
-
-            tag = None
-            tag_type = ""
-            if term:
-                tag = "╎ " + term
-                tag_type = "term"
-            if festival:
-                tag = (tag + "  " if tag else "") + "● " + festival
-                tag_type = "festival"
-
-            cells.append({
-                "day": day,
-                "weekday": col_idx,  # 0=Mon, 6=Sun
-                "isToday": is_today,
-                "lunarDayName": day_name,
-                "isSpecialLunar": is_special,
-                "tag": tag,
-                "tagType": tag_type,
-            })
-
-    return jsonify({
-        "year": year,
-        "month": month,
-        "sexagenary": year_sexagenary(year),
-        "zodiac": year_zodiac(year),
-        "cells": cells,
-    })
+    return jsonify(result)
 
 
-# ─── 启动 ────────────────────────────────────────────────────
-
-def run_web(host: str = "127.0.0.1", port: int = 5000, debug: bool = False):
-    """启动 Web 服务"""
-    print(f"\n  📅 万年历 Web 版")
-    print(f"  ───────────────────")
-    print(f"  打开浏览器访问: http://{host}:{port}")
+def run_web(host="127.0.0.1", port=5000, debug=False):
+    print(f"\n  📅 万年历 Web 统一版")
+    print(f"  ──────────────────────")
+    print(f"  🇨🇳 农历  🌙 伊斯兰历  🇯🇵 日本和历  🛕 佛历")
+    print(f"  打开浏览器: http://{host}:{port}")
     print(f"  按 Ctrl+C 退出\n")
     app.run(host=host, port=port, debug=debug)
