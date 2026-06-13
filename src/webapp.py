@@ -64,8 +64,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Micr
 .weekdays span:nth-child(7){color:var(--red)}
 .weekdays span:nth-child(6){color:var(--accent)}
 
-.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;padding:4px 14px 16px}
-.cell{aspect-ratio:1;border-radius:var(--radius);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:var(--transition);min-height:70px;background:var(--bg)}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);grid-template-rows:repeat(6,1fr);gap:3px;padding:4px 14px 16px;min-height:420px}
+.cell{border-radius:var(--radius);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:var(--transition);background:var(--bg);overflow:hidden}
 .cell:hover{background:rgba(255,255,255,0.06)}
 .cell.empty{background:transparent;cursor:default}.cell.empty:hover{background:transparent}
 .cell .solar{font-size:17px;font-weight:600;color:var(--text);line-height:1.2}
@@ -210,8 +210,9 @@ def _build_japanese_cell(year, month, day, col_idx, is_today, term_map):
 
 def _build_buddhist_cell(year, month, day, col_idx, is_today, term_map):
     bd = gregorian_to_buddhist(year, month, day)
-    day_name = f"BE {bd.year}"
-    is_special = False
+    tms = thai_month_short(month)
+    day_name = f"{tms}{day}"
+    is_special = (day == 1)
 
     holiday = thai_holiday(month, day)
     term = term_map.get(day)
