@@ -13,7 +13,7 @@ from flask import Flask, request, jsonify, render_template_string
 from .lunar import (
     solar_to_lunar, year_sexagenary, year_zodiac,
     lunar_festival, solar_festival, LUNAR_DAY_NAMES,
-    LUNAR_FESTIVAL_INTRO,
+    LUNAR_FESTIVAL_INTRO, SOLAR_FESTIVAL_INTRO,
 )
 from .solar_terms import get_solar_terms_for_month
 from .islamic import (
@@ -352,6 +352,7 @@ def api_calendar():
         result["zodiac"] = year_zodiac(year)
         for c in cells:
             if c["day"] == 0: continue
+            # 农历节日
             ld = solar_to_lunar(year, month, c["day"])
             f = lunar_festival(ld)
             if f and f in LUNAR_FESTIVAL_INTRO and f not in festivals_in_month:
@@ -359,6 +360,14 @@ def api_calendar():
                     "name": f, "date": f"农历{ld.month}月{ld.day}日",
                     "gregorianDate": f"{year}年{month}月{c['day']}日",
                     "intro": LUNAR_FESTIVAL_INTRO[f],
+                }
+            # 公历节日
+            sf = solar_festival(month, c["day"])
+            if sf and sf in SOLAR_FESTIVAL_INTRO and sf not in festivals_in_month:
+                festivals_in_month[sf] = {
+                    "name": sf, "date": f"{year}年{month}月{c['day']}日",
+                    "gregorianDate": f"{year}年{month}月{c['day']}日",
+                    "intro": SOLAR_FESTIVAL_INTRO[sf],
                 }
     elif cal_type == "islamic":
         result["subtitle"] = subtitle or ""
