@@ -51,9 +51,9 @@ def main():
     # ── Web ──
     if args.web:
         from src.webapp import run_web
-        host, port = "127.0.0.1", args.port
+        host, port = "0.0.0.0", args.port
         if not args.no_browser:
-            def _open(): time.sleep(0.8); webbrowser.open(f"http://{host}:{port}")
+            def _open(): time.sleep(0.8); webbrowser.open(f"http://127.0.0.1:{port}")
             threading.Thread(target=_open, daemon=True).start()
         run_web(host=host, port=port); return
 

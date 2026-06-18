@@ -410,10 +410,14 @@ def api_calendar():
     return jsonify(result)
 
 
-def run_web(host="127.0.0.1", port=5000, debug=False):
-    print(f"\n  📅 万年历 Web 统一版")
-    print(f"  ──────────────────────")
+def run_web(host="0.0.0.0", port=5000, debug=True):
+    import socket
+    local_ip = socket.gethostbyname(socket.gethostname())
+    print(f"\n  📅 万年历 Web 统一版 (热重载已开启)")
+    print(f"  ─────────────────────────────────────")
     print(f"  🇨🇳 农历  🌙 伊斯兰历  🇯🇵 日本和历  🛕 佛历")
-    print(f"  打开浏览器: http://{host}:{port}")
+    print(f"  本机访问:    http://127.0.0.1:{port}")
+    print(f"  局域网访问:  http://{local_ip}:{port}")
+    print(f"  修改源码后自动重载，iPad 浏览器实时看到效果")
     print(f"  按 Ctrl+C 退出\n")
     app.run(host=host, port=port, debug=debug)
