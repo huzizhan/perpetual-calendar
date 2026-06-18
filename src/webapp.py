@@ -411,13 +411,26 @@ def api_calendar():
 
 
 def run_web(host="0.0.0.0", port=5000, debug=True):
-    import socket
+    import socket, subprocess, os
     local_ip = socket.gethostbyname(socket.gethostname())
+    # 尝试获取 Tailscale IP
+    ts_ip = ""
+    try:
+        ts_sock = os.path.expanduser("~/.local/share/tailscale/tailscaled.sock")
+        ts_ip = subprocess.run(
+            ["tailscale", "--socket=" + ts_sock, "ip", "-4"],
+            capture_output=True, text=True, timeout=5
+        ).stdout.strip()
+    except Exception:
+        pass
+
     print(f"\n  📅 万年历 Web 统一版 (热重载已开启)")
-    print(f"  ─────────────────────────────────────")
+    print(f"  ──────────────────────────────────────")
     print(f"  🇨🇳 农历  🌙 伊斯兰历  🇯🇵 日本和历  🛕 佛历")
-    print(f"  本机访问:    http://127.0.0.1:{port}")
-    print(f"  局域网访问:  http://{local_ip}:{port}")
+    print(f"  本机访问:       http://127.0.0.1:{port}")
+    print(f"  局域网 (WiFi):  http://{local_ip}:{port}")
+    if ts_ip:
+        print(f"  Tailscale (iPad): http://{ts_ip}:{port}")
     print(f"  修改源码后自动重载，iPad 浏览器实时看到效果")
     print(f"  按 Ctrl+C 退出\n")
     app.run(host=host, port=port, debug=debug)
