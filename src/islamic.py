@@ -136,7 +136,7 @@ ISLAMIC_FESTIVAL_INTRO: dict[str, str] = {
 
 # 伊斯兰历纪元: 1 Muharram 1 AH = 公元 622 年 7 月 16 日 (Julian)
 # 对应儒略日: 1948440（使用 Julian 公式计算，622 年在 1582 年改革前）
-HIJRI_EPOCH_JD = 1948440
+HIJRI_EPOCH_JD = 1948440  # 科威特算法标准epoch，已验证对准2024-2026开斋节/古尔邦节
 
 
 def _is_julian_date(year: int, month: int, day: int) -> bool:
