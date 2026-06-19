@@ -8,7 +8,8 @@ import datetime
 import json
 import logging
 
-from flask import Flask, request, jsonify, render_template_string
+import os
+from flask import Flask, request, jsonify, render_template_string, send_from_directory
 
 from .lunar import (
     solar_to_lunar, year_sexagenary, year_zodiac,
@@ -30,7 +31,7 @@ from .buddhist import (
 )
 
 logging.basicConfig(level=logging.INFO)
-app = Flask(__name__)
+app = Flask(__name__, static_folder=None)  # 禁用默认静态，用自定义路由
 
 PAGE_HTML = r"""<!DOCTYPE html>
 <html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>万年历</title>
@@ -99,7 +100,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Micr
 .festival-panel .fp-nav{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
 .festival-panel .fp-nav button{padding:4px 12px;border-radius:12px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:var(--text-dim);font-size:11px;cursor:pointer}
 .festival-panel .fp-nav button:hover,.festival-panel .fp-nav button.active{color:var(--accent2);border-color:var(--accent2)}
-</style></head><body>
+</style>
+<!-- PWA -->
+<link rel="manifest" href="/static/manifest.json">
+<meta name="theme-color" content="#313244">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="万年历">
+<link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="512x512" href="/static/icons/icon-512.png">
+</head><body>
 <div class="container">
 <div class="header">
 <button class="nav-btn" onclick="prevMonth()">◀</button>
@@ -198,6 +208,8 @@ function jumpDialog(){document.getElementById("jy").value=cY;document.getElement
 function closeJump(){document.getElementById("jd").close()}
 function doJump(){const y=parseInt(document.getElementById("jy").value),m=parseInt(document.getElementById("jm").value);if(y>=622&&y<=2100&&m>=1&&m<=12){cY=y;cM=m;load();closeJump()}else{alert("年份: 622–2100, 月份: 1–12")}}
 document.addEventListener("keydown",e=>{if(e.target.tagName==="INPUT")return;switch(e.key){case"ArrowLeft":prevMonth();break;case"ArrowRight":nextMonth();break;case"ArrowUp":prevYear();break;case"ArrowDown":nextYear();break;case"t":case"T":goToday();break;case"g":case"G":jumpDialog();break;case"1":switchCal(0);break;case"2":switchCal(1);break;case"3":switchCal(2);break;case"4":switchCal(3);break}});
+// PWA: register service worker
+if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').then(r=>console.log('[PWA] SW registered')).catch(e=>console.log('[PWA] SW failed',e))}
 load();
 </script>
 </body></html>"""
@@ -301,6 +313,25 @@ BUILDERS = {
     "buddhist": _build_buddhist_cell,
 }
 
+
+# ─── 静态文件 & PWA ──────────────────────────────────────
+
+_STATIC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "static"))
+
+
+@app.route("/sw.js")
+def service_worker():
+    """Service Worker — 必须在根路径 """
+    return send_from_directory(_STATIC_DIR, "sw.js", mimetype="application/javascript")
+
+
+@app.route("/static/<path:filename>")
+def static_files(filename):
+    """静态资源：图标、manifest 等"""
+    return send_from_directory(_STATIC_DIR, filename)
+
+
+# ─── 页面 & API ──────────────────────────────────────────
 
 @app.route("/")
 def index():
