@@ -11,6 +11,7 @@ import logging
 import os
 from flask import Flask, request, jsonify, render_template_string, send_from_directory
 
+from .huangli import compute_almanac
 from .lunar import (
     solar_to_lunar, year_sexagenary, year_zodiac,
     lunar_festival, solar_festival, LUNAR_DAY_NAMES,
@@ -100,6 +101,22 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Micr
 .festival-panel .fp-nav{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
 .festival-panel .fp-nav button{padding:4px 12px;border-radius:12px;border:1px solid rgba(255,255,255,0.15);background:transparent;color:var(--text-dim);font-size:11px;cursor:pointer}
 .festival-panel .fp-nav button:hover,.festival-panel .fp-nav button.active{color:var(--accent2);border-color:var(--accent2)}
+/* 黄历面板 */
+.almanac-panel{display:none;margin:0 14px 12px;padding:14px 18px;background:var(--header-bg);border-radius:12px;border-left:4px solid var(--yellow)}
+.almanac-panel.show{display:block}
+.almanac-panel .ap-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.almanac-panel .ap-header .ap-sexagenary{font-size:18px;font-weight:700;color:var(--yellow)}
+.almanac-panel .ap-header .ap-jianchu{font-size:13px;padding:3px 10px;border-radius:10px;background:rgba(249,226,175,0.15);color:var(--yellow);font-weight:600}
+.almanac-panel .ap-header .ap-wuxing{font-size:12px;color:var(--text-dim)}
+.almanac-panel .ap-row{display:flex;gap:12px;margin-bottom:6px;flex-wrap:wrap}
+.almanac-panel .ap-label{font-size:10px;font-weight:700;color:var(--text-dim);min-width:20px}
+.almanac-panel .ap-tags{display:flex;flex-wrap:wrap;gap:4px}
+.almanac-panel .ap-tags span{padding:3px 9px;border-radius:8px;font-size:11px}
+.ap-tag-yi{background:rgba(166,227,161,0.15);color:var(--green)}
+.ap-tag-ji{background:rgba(243,139,168,0.15);color:var(--red)}
+.ap-tag-shen{background:rgba(250,179,135,0.15);color:var(--orange)}
+.ap-tag-xiong{background:rgba(166,173,200,0.12);color:var(--text-dim)}
+.ap-chong{font-size:12px;color:var(--red);font-weight:600}
 </style>
 <!-- PWA -->
 <link rel="manifest" href="/static/manifest.json">
@@ -136,6 +153,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Micr
   <div class="fp-intro" id="fp-intro"></div>
   <div class="fp-nav" id="fp-nav"></div>
 </div>
+<div class="almanac-panel" id="ap">
+  <div class="ap-header">
+    <span class="ap-sexagenary" id="ap-sexagenary"></span>
+    <span class="ap-jianchu" id="ap-jianchu"></span>
+    <span class="ap-wuxing" id="ap-wuxing"></span>
+  </div>
+  <div class="ap-row"><span class="ap-label">宜</span><div class="ap-tags" id="ap-yi"></div></div>
+  <div class="ap-row"><span class="ap-label">忌</span><div class="ap-tags" id="ap-ji"></div></div>
+  <div class="ap-row"><span class="ap-label">冲</span><span class="ap-chong" id="ap-chong"></span></div>
+  <div class="ap-row"><span class="ap-label">吉</span><div class="ap-tags" id="ap-jishen"></div></div>
+  <div class="ap-row"><span class="ap-label">凶</span><div class="ap-tags" id="ap-xiongshen"></div></div>
+</div>
 <div class="footer"><span class="hint">←→翻月 ↑↓翻年 1-4切历法 T今天 G跳转</span><span class="today-info" id="ti"></span></div>
 <dialog id="jd" style="border:none;border-radius:14px;padding:24px 28px;background:var(--header-bg);color:var(--text);box-shadow:0 20px 60px rgba(0,0,0,0.5);min-width:250px">
 <div style="font-size:16px;font-weight:700;margin-bottom:14px;text-align:center">跳转到</div>
@@ -166,7 +195,7 @@ async function load(){
     if(c.isToday)div.classList.add("today");
     if(c.weekday===6)div.classList.add("sunday");if(c.weekday===5)div.classList.add("saturday");
     if(c.festivalName)div.setAttribute('data-festival',c.festivalName);
-    div.onclick=async()=>{const dd=new Date(cY,cM-1,c.day);cY=dd.getFullYear();cM=dd.getMonth()+1;await load();if(c.festivalName)switchToFestival(c.festivalName)};
+    div.onclick=async()=>{const dd=new Date(cY,cM-1,c.day);cY=dd.getFullYear();cM=dd.getMonth()+1;await load();if(c.almanac)renderAlmanac(c.almanac);if(c.festivalName)switchToFestival(c.festivalName)};
     const se=document.createElement("div");se.className="solar";se.textContent=c.day;div.appendChild(se);
     const le=document.createElement("div");le.className="lunar";
     if(c.isSpecialLunar)le.classList.add("s"+cal);le.textContent=c.lunarDayName||"";div.appendChild(le);
@@ -177,7 +206,26 @@ async function load(){
   if(d.festivals&&d.festivals.length>0){
     _festivals=d.festivals;_festIdx=0;_renderFestival(0);
   }else{_festivals=[];document.getElementById("fp").classList.remove("show")}
+  // 黄历面板：默认显示今天（仅chinese模式下有almanac数据）
+  const todayCell=d.cells.find(c=>c.isToday);
+  if(todayCell&&todayCell.almanac){renderAlmanac(todayCell.almanac)}
+  else if(cal!==0){document.getElementById("ap").classList.remove("show")}
 }
+
+// 黄历面板渲染
+function renderAlmanac(a){
+  if(!a)return;
+  document.getElementById("ap").classList.add("show");
+  document.getElementById("ap-sexagenary").textContent=a.sexagenary+"日";
+  document.getElementById("ap-jianchu").textContent=a.jianchu;
+  document.getElementById("ap-wuxing").textContent=a.wuxing;
+  document.getElementById("ap-yi").innerHTML=a.yi.map(t=>'<span class="ap-tag-yi">'+t+'</span>').join('');
+  document.getElementById("ap-ji").innerHTML=a.ji.map(t=>'<span class="ap-tag-ji">'+t+'</span>').join('');
+  document.getElementById("ap-chong").textContent=a.chong;
+  document.getElementById("ap-jishen").innerHTML=a.jishen.map(t=>'<span class="ap-tag-shen">'+t+'</span>').join('');
+  document.getElementById("ap-xiongshen").innerHTML=a.xiongshen.map(t=>'<span class="ap-tag-xiong">'+t+'</span>').join('');
+}
+let _todayAlmanac=null;
 
 // 全局：通过节日名切换面板（日历格点击触发）
 let _festivals=[],_festIdx=0;
@@ -303,6 +351,12 @@ def _build_chinese_cell(year, month, day, col_idx, is_today, term_map):
               "lunarDayName": day_name, "isSpecialLunar": is_special,
               "tag": tag, "tagType": tag_type}
     if festival: result["festivalName"] = festival
+    # 黄历数据
+    try:
+        al = compute_almanac(year, month, day)
+        result["almanac"] = al.to_dict()
+    except Exception:
+        pass
     return result, None
 
 
