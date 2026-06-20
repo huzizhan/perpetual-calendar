@@ -1,0 +1,27 @@
+{
+  "version": 2,
+  "functions": {
+    "api/index.py": {
+      "memory": 256,
+      "maxDuration": 10
+    }
+  },
+  "routes": [
+    {
+      "src": "/static/(.*)",
+      "dest": "/static/$1"
+    },
+    {
+      "src": "/sw.js",
+      "dest": "/static/sw.js"
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/index.py"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/api/index.py"
+    }
+  ]
+}

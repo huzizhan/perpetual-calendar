@@ -370,7 +370,10 @@ BUILDERS = {
 
 # ─── 静态文件 & PWA ──────────────────────────────────────
 
-_STATIC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "static"))
+_STATIC_DIR = os.environ.get(
+    "STATIC_DIR",
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "static"))
+)
 
 
 @app.route("/sw.js")
