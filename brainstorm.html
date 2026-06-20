@@ -32,6 +32,27 @@
   .tag-done { background: rgba(166,227,161,0.15); color: var(--green); }
   .tag-wip { background: rgba(250,179,135,0.15); color: var(--orange); }
 
+  
+  /* 竞品 & 盈利 */
+  .section-title{font-size:1.1em;font-weight:700;margin:28px 0 14px;padding-left:8px;border-left:3px solid var(--accent)}
+  .cmp-table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:20px;border-radius:10px;overflow:hidden;background:var(--surface)}
+  .cmp-table th{background:var(--header-bg);padding:9px 10px;text-align:left;font-weight:600;color:var(--accent);font-size:11px}
+  .cmp-table td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.04);vertical-align:top;line-height:1.5}
+  .cmp-table tr.us td{background:rgba(203,166,247,0.06)}
+  .cmp-table tr.us td:first-child{font-weight:700;color:var(--purple)}
+  .t-win{display:inline-block;padding:2px 7px;border-radius:6px;font-size:10px;font-weight:600;background:rgba(166,227,161,0.15);color:var(--green)}
+  .t-lose{display:inline-block;padding:2px 7px;border-radius:6px;font-size:10px;font-weight:600;background:rgba(243,139,168,0.12);color:var(--red)}
+  .t-eq{display:inline-block;padding:2px 7px;border-radius:6px;font-size:10px;color:var(--text-dim);background:rgba(255,255,255,0.04)}
+  .rev-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:22px}
+  .rev-card{background:var(--surface);border-radius:12px;padding:18px;border:1px solid rgba(255,255,255,0.05);text-align:center}
+  .rev-card .rc-emoji{font-size:1.8em;margin-bottom:6px}
+  .rev-card .rc-name{font-weight:700;font-size:14px;margin-bottom:4px}
+  .rev-card .rc-desc{font-size:11px;color:var(--text-dim);line-height:1.5;margin-bottom:8px}
+  .rev-card .rc-num{font-size:1.2em;font-weight:800;color:var(--yellow)}
+  .hbox{background:var(--surface);border-radius:12px;padding:16px 20px;margin-bottom:18px;border:1px solid rgba(255,255,255,0.05)}
+  .hbox h3{font-size:14px;color:var(--accent);margin-bottom:6px}
+  .hbox p{font-size:12px;color:var(--text-dim);line-height:1.7}
+
   /* Kanban Grid */
   .kanban { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: var(--gap); margin-bottom: 30px; }
 
@@ -128,6 +149,100 @@
     <div class="summary-item"><div class="val">~4d</div><div class="lbl">Phase 2：PWA ✅  + App</div></div>
     <div class="summary-item"><div class="val">~4d</div><div class="lbl">Phase 3：盈利 + 运营</div></div>
     <div class="summary-item"><div class="val">~3d</div><div class="lbl">Phase 4：增长功能</div></div>
+  </div>
+
+  
+  <!-- ═══ 竞品对比 & 盈利模式 ═══ -->
+  <h2 class="section-title">🔍 竞品对比矩阵</h2>
+  <table class="cmp-table">
+    <thead><tr><th>维度</th><th>我们（万年历）</th><th>中华万年历</th><th>系统日历</th><th>timeanddate</th></tr></thead>
+    <tbody>
+      <tr class="us"><td>四历法统一</td><td><span class="t-win">独家</span> 农历+伊斯兰+和历+佛历</td><td>只有农历</td><td>仅公历+农历</td><td>多历法但无中文</td></tr>
+      <tr class="us"><td>节日文化科普</td><td><span class="t-win">独家</span> 30+篇节日介绍</td><td><span class="t-lose">无</span></td><td><span class="t-lose">无</span></td><td>英文简要说明</td></tr>
+      <tr class="us"><td>黄历择日</td><td>宜忌/冲煞/建除 <span class="t-eq">基础版</span></td><td><span class="t-win">强</span> 完整黄历+吉时</td><td><span class="t-lose">无</span></td><td><span class="t-lose">无</span></td></tr>
+      <tr class="us"><td>用户体验</td><td><span class="t-win">无广告</span> 深色主题</td><td><span class="t-lose">广告多到劝退</span></td><td><span class="t-eq">简洁但单调</span></td><td><span class="t-lose">界面老旧</span></td></tr>
+      <tr class="us"><td>跨平台</td><td>PWA <span class="t-win">免安装</span></td><td>App 需下载</td><td>系统内置</td><td>纯网页</td></tr>
+      <tr class="us"><td>离线可用</td><td><span class="t-win">PWA 离线缓存</span></td><td><span class="t-eq">部分</span></td><td><span class="t-eq">部分</span></td><td><span class="t-lose">不可</span></td></tr>
+      <tr class="us"><td>穆斯林/佛教用户</td><td><span class="t-win">独家覆盖</span></td><td><span class="t-lose">无</span></td><td><span class="t-lose">无</span></td><td><span class="t-lose">无</span></td></tr>
+      <tr class="us"><td>价格</td><td><span class="t-win">免费（广告极简）</span></td><td>免费（广告轰炸）</td><td>免费</td><td>免费</td></tr>
+    </tbody>
+  </table>
+
+  <h2 class="section-title">💎 差异化定位</h2>
+  <div class="hbox">
+    <h3>一句话：「一个 App，看懂全世界的节日和时间」</h3>
+    <p>我们不跟中华万年历拼黄历深度，不跟系统日历拼同步，不跟 timeanddate 拼数据权威。<br>
+    <strong>我们拼的是「跨文化日历科普」这个空白赛道。</strong><br>
+    中国人看农历+黄历 / 穆斯林看斋月+节日 / 日本人看年号+六曜 / 泰国人看佛历+宋干节 —— 一个 App 全有，且用中文讲文化故事。</p>
+  </div>
+
+  <h2 class="section-title">💰 盈利模式分解</h2>
+  <div class="rev-grid">
+    <div class="rev-card">
+      <div class="rc-emoji">📢</div>
+      <div class="rc-name">AdMob 广告</div>
+      <div class="rc-desc">底部横幅，日活 1000 ≈ ¥2-5/天</div>
+      <div class="rc-num">¥70-150/月</div>
+    </div>
+    <div class="rev-card">
+      <div class="rc-emoji">🛡️</div>
+      <div class="rc-name">付费去广告</div>
+      <div class="rc-desc">¥12 一次性买断，30% 用户会选择</div>
+      <div class="rc-num">¥360/千用户</div>
+    </div>
+    <div class="rev-card">
+      <div class="rc-emoji">⭐</div>
+      <div class="rc-name">VIP 订阅</div>
+      <div class="rc-desc">¥3/月 或 ¥18/年，无限提醒+跨历法转换+自定义节日</div>
+      <div class="rc-num">¥18/用户/年</div>
+    </div>
+    <div class="rev-card">
+      <div class="rc-emoji">🏢</div>
+      <div class="rc-name">企业定制</div>
+      <div class="rc-desc">给跨境企业/旅行社定制多历法日历 SaaS</div>
+      <div class="rc-num">¥500-2000/月/客户</div>
+    </div>
+    <div class="rev-card">
+      <div class="rc-emoji">🕌</div>
+      <div class="rc-name">垂直场景</div>
+      <div class="rc-desc">清真/佛教节日 API 按调用量收费</div>
+      <div class="rc-num">¥0.01/次</div>
+    </div>
+  </div>
+
+  <h2 class="section-title">📊 收入预估（阶梯模型）</h2>
+  <table class="cmp-table">
+    <thead><tr><th>阶段</th><th>用户量</th><th>广告</th><th>买断</th><th>订阅</th><th>月收入</th></tr></thead>
+    <tbody>
+      <tr><td>冷启动</td><td>0-500</td><td>-</td><td>-</td><td>-</td><td>¥0</td></tr>
+      <tr><td>验证期</td><td>500-5000</td><td>¥100</td><td>¥150</td><td>¥100</td><td>~¥350/月</td></tr>
+      <tr><td>增长期</td><td>5000-5万</td><td>¥800</td><td>¥1200</td><td>¥1500</td><td>~¥3500/月</td></tr>
+      <tr class="us"><td>规模化</td><td>5万+</td><td>¥5000</td><td>¥3000</td><td>¥15000</td><td>~¥23000/月</td></tr>
+    </tbody>
+  </table>
+
+  <h2 class="section-title">🎯 免费 vs 付费功能矩阵</h2>
+  <table class="cmp-table">
+    <thead><tr><th>功能</th><th>免费版</th><th>付费版 (¥12买断)</th><th>VIP (¥3/月)</th></tr></thead>
+    <tbody>
+      <tr><td>四种历法查看</td><td>✅</td><td>✅</td><td>✅</td></tr>
+      <tr><td>节日介绍卡片</td><td>✅</td><td>✅</td><td>✅</td></tr>
+      <tr><td>黄历宜忌</td><td>✅</td><td>✅</td><td>✅</td></tr>
+      <tr><td>跨历法转换器</td><td>3次/天</td><td>无限</td><td>无限</td></tr>
+      <tr><td>生日/纪念日提醒</td><td>3个</td><td>10个</td><td>无限</td></tr>
+      <tr><td>广告</td><td>有</td><td><span class="t-win">无广告</span></td><td><span class="t-win">无广告</span></td></tr>
+      <tr><td>日历 iCal 导出</td><td>水印</td><td>无水印</td><td>无水印</td></tr>
+      <tr><td>云同步</td><td>❌</td><td>❌</td><td>✅</td></tr>
+      <tr><td>自定义节日</td><td>❌</td><td>❌</td><td>✅</td></tr>
+      <tr><td>推送通知</td><td>❌</td><td>✅</td><td>✅</td></tr>
+    </tbody>
+  </table>
+
+  <div class="hbox" style="border-left:3px solid var(--yellow);margin-top:18px">
+    <h3>💡 核心策略</h3>
+    <p><strong>免费版要足够好</strong> → 用户留下来 → 10个人里1个人付费就赚钱。<br>
+    <strong>别学中华万年历</strong> → 广告轰炸只会赶走用户。我们走「温和商业化」路线。<br>
+    <strong>先上 PWA 验证</strong> → 有 500 日活再上原生 App → 有 5000 日活再融资/扩张。</p>
   </div>
 
   <!-- Kanban -->
