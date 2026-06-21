@@ -117,6 +117,39 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Micr
 .ap-tag-shen{background:rgba(250,179,135,0.15);color:var(--orange)}
 .ap-tag-xiong{background:rgba(166,173,200,0.12);color:var(--text-dim)}
 .ap-chong{font-size:12px;color:var(--red);font-weight:600}
+/* 移动端 */
+.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--header-bg);border-top:1px solid rgba(255,255,255,0.08);z-index:100;padding:6px 0 env(safe-area-inset-bottom)}
+.bottom-nav .bn-tabs{display:flex;justify-content:space-around}
+.bottom-nav .bn-tab{flex:1;text-align:center;padding:6px 0;color:var(--text-dim);font-size:10px;cursor:pointer;transition:var(--transition);border:none;background:transparent}
+.bottom-nav .bn-tab .bn-icon{font-size:20px;display:block;margin-bottom:2px}
+.bottom-nav .bn-tab.active{color:var(--accent)}
+@media(max-width:768px){
+body{padding:0;align-items:flex-start}
+.container{border-radius:0;min-height:100vh;max-width:100%}
+.header{padding:14px 12px 6px;gap:6px}
+.nav-btn{width:34px;height:34px;font-size:15px}
+.title-group .ym{font-size:18px}
+.cal-toggle{padding:6px 12px 10px;gap:3px}
+.cal-toggle button{padding:5px 10px;font-size:11px}
+.quick-bar{padding:0 12px 8px}
+.grid{padding:3px 6px;gap:2px}
+.cell{min-height:58px;border-radius:8px}
+.cell .solar{font-size:15px}
+.cell .lunar{font-size:10px}
+.cell .tag{font-size:8px}
+.festival-panel,.almanac-panel{margin:0 8px 10px;padding:12px 14px}
+.bottom-nav{display:block}
+.footer{padding-bottom:70px}
+}
+@media(max-width:400px){
+.header{padding:10px 8px 4px}
+.grid{padding:2px 4px;gap:1px}
+.cell{min-height:48px}
+.cell .solar{font-size:13px}
+.cell .lunar{font-size:9px}
+.title-group .ym{font-size:16px}
+.cal-toggle button{padding:4px 8px;font-size:10px}
+}
 </style>
 <!-- PWA -->
 <link rel="manifest" href="/static/manifest.json">
@@ -165,6 +198,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Micr
   <div class="ap-row"><span class="ap-label">吉</span><div class="ap-tags" id="ap-jishen"></div></div>
   <div class="ap-row"><span class="ap-label">凶</span><div class="ap-tags" id="ap-xiongshen"></div></div>
 </div>
+<div class="bottom-nav"><div class="bn-tabs"><button class="bn-tab active" onclick="switchTab(0)"><span class="bn-icon">📅</span>日历</button><button class="bn-tab" onclick="switchTab(1)"><span class="bn-icon">🎉</span>节日</button><button class="bn-tab" onclick="switchTab(2)"><span class="bn-icon">🧿</span>黄历</button></div></div>
 <div class="footer"><span class="hint">←→翻月 ↑↓翻年 1-4切历法 T今天 G跳转</span><span class="today-info" id="ti"></span></div>
 <dialog id="jd" style="border:none;border-radius:14px;padding:24px 28px;background:var(--header-bg);color:var(--text);box-shadow:0 20px 60px rgba(0,0,0,0.5);min-width:250px">
 <div style="font-size:16px;font-weight:700;margin-bottom:14px;text-align:center">跳转到</div>
@@ -255,6 +289,22 @@ function goToday(){cY=today.getFullYear();cM=today.getMonth()+1;load()}
 function jumpDialog(){document.getElementById("jy").value=cY;document.getElementById("jm").value=cM;document.getElementById("jd").showModal()}
 function closeJump(){document.getElementById("jd").close()}
 function doJump(){const y=parseInt(document.getElementById("jy").value),m=parseInt(document.getElementById("jm").value);if(y>=622&&y<=2100&&m>=1&&m<=12){cY=y;cM=m;load();closeJump()}else{alert("年份: 622–2100, 月份: 1–12")}}
+// 移动端 Tab & 滑动
+let _activeTab=0;
+function switchTab(n){
+  _activeTab=n;
+  document.querySelectorAll('.bn-tab').forEach((b,i)=>b.classList.toggle('active',i===n));
+  const fp=document.getElementById('fp'),ap=document.getElementById('ap'),grid=document.getElementById('g');
+  if(n===0){fp.classList.remove('show');ap.classList.remove('show');grid.style.display=''}
+  else if(n===1){ap.classList.remove('show');if(_festivals.length)fp.classList.add('show');grid.style.display='none'}
+  else if(n===2){fp.classList.remove('show');if(_todayAlmanac)ap.classList.add('show');grid.style.display='none'}
+}
+let _tSX=0,_tSY=0;
+document.addEventListener('touchstart',e=>{_tSX=e.touches[0].clientX;_tSY=e.touches[0].clientY},{passive:true});
+document.addEventListener('touchend',e=>{
+  const dx=e.changedTouches[0].clientX-_tSX,dy=e.changedTouches[0].clientY-_tSY;
+  if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>40){if(dx>0)prevMonth();else nextMonth()}
+},{passive:true});
 document.addEventListener("keydown",e=>{if(e.target.tagName==="INPUT")return;switch(e.key){case"ArrowLeft":prevMonth();break;case"ArrowRight":nextMonth();break;case"ArrowUp":prevYear();break;case"ArrowDown":nextYear();break;case"t":case"T":goToday();break;case"g":case"G":jumpDialog();break;case"1":switchCal(0);break;case"2":switchCal(1);break;case"3":switchCal(2);break;case"4":switchCal(3);break}});
 // PWA: register service worker
 if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').then(r=>console.log('[PWA] SW registered')).catch(e=>console.log('[PWA] SW failed',e))}
