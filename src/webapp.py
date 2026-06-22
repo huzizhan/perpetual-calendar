@@ -123,6 +123,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Micr
 .bottom-nav .bn-tab{flex:1;text-align:center;padding:6px 0;color:var(--text-dim);font-size:10px;cursor:pointer;transition:var(--transition);border:none;background:transparent}
 .bottom-nav .bn-tab .bn-icon{font-size:20px;display:block;margin-bottom:2px}
 .bottom-nav .bn-tab.active{color:var(--accent)}
+/* 弹窗居中 */
+dialog{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);margin:0;max-width:90vw;max-height:80vh}
+dialog::backdrop{background:rgba(0,0,0,0.6)}
 @media(max-width:768px){
 body{padding:0;align-items:flex-start}
 .container{border-radius:0;min-height:100vh;max-width:100%}
