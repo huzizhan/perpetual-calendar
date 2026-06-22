@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>万年历 — 开发日志</title>
+<style>
+:root{--bg:#1e1e2e;--surface:#2a2a3a;--header-bg:#313244;--text:#cdd6f4;--text-dim:#6c7086;--accent:#89b4fa;--green:#a6e3a1;--yellow:#f9e2af;--purple:#cba6f7}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:24px}
+.container{max-width:600px;margin:0 auto}
+h1{font-size:1.4em;margin-bottom:20px;color:var(--accent)}
+.day{margin-bottom:14px;padding:14px 16px;background:var(--surface);border-radius:12px;border-left:3px solid var(--accent)}
+.day h2{font-size:14px;color:var(--accent);margin-bottom:6px}
+.day ul{list-style:none;padding:0}
+.day li{font-size:13px;color:var(--text-dim);line-height:1.7}
+.day li::before{content:"· ";color:var(--green)}
+.commit{font-size:11px;color:var(--text-dim);margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.05)}
+.done{color:var(--green)}
+a{color:var(--accent)}
+</style></head><body>
+<div class="container">
+<h1>📅 万年历 — 开发日志</h1>
+
+<div class="day">
+  <h2>2026-06-22 (周日)</h2>
+  <ul>
+    <li>移动端底部导航栏: 📅日历 / 🎉节日 / 🧿黄历 / 🔄转换</li>
+    <li>触摸左右滑动翻月</li>
+    <li>浅色主题 + 🌙/☀️ 一键切换</li>
+    <li>跨历法转换器上线</li>
+    <li>弹窗居中 + 防缩放 + 回顶修复</li>
+  </ul>
+  <div class="commit">4 commits · ad8a265</div>
+</div>
+
+<div class="day">
+  <h2>2026-06-21 (周六)</h2>
+  <ul>
+    <li>Vercel 部署配置 (vercel.json + api/index.py)</li>
+    <li>GitHub 仓库创建 + 推送</li>
+    <li>看板新增: 竞品对比/盈利模式/出海场景/功能池</li>
+  </ul>
+  <div class="commit">cb73575</div>
+</div>
+
+<div class="day">
+  <h2>2026-06-20 (周五)</h2>
+  <ul>
+    <li>农历数据修复: bit映射反转 + 5处数据错误</li>
+    <li>黄历择日引擎完成 (宜忌/冲煞/吉神/五行)</li>
+    <li>伊斯兰历/日本和历/佛历精度验证</li>
+    <li>项目迁移至 ~/Developer</li>
+  </ul>
+  <div class="commit">9377c99 → 88ebdd1</div>
+</div>
+
+<div class="day">
+  <h2>2026-06-19 (周四) — 项目启动</h2>
+  <ul>
+    <li>四历法引擎 (农历/伊斯兰/和历/佛历)</li>
+    <li>Web 界面 + Tailscale 远程开发</li>
+    <li>PWA 支持 (manifest + Service Worker)</li>
+    <li>30 篇节日介绍 + 点击联动面板</li>
+  </ul>
+  <div class="commit">e991c5d → 2f56757</div>
+</div>
+
+<p style="text-align:center;margin-top:24px;font-size:12px;color:var(--text-dim)">
+  <span class="done">✅ 已完成 10/21 任务</span> ·
+  <a href="/calendar/brainstorm.html">看板</a> ·
+  <a href="http://127.0.0.1:8090">日历</a>
+</p>
+</div></body></html>
