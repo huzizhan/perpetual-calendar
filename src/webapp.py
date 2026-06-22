@@ -291,7 +291,7 @@ function nextYear(){cY++;load()}
 function goToday(){cY=today.getFullYear();cM=today.getMonth()+1;load()}
 function jumpDialog(){document.getElementById("jy").value=cY;document.getElementById("jm").value=cM;document.getElementById("jd").showModal()}
 function closeJump(){document.getElementById("jd").close()}
-function doJump(){const y=parseInt(document.getElementById("jy").value),m=parseInt(document.getElementById("jm").value);if(y>=622&&y<=2100&&m>=1&&m<=12){cY=y;cM=m;load();closeJump()}else{alert("年份: 622–2100, 月份: 1–12")}}
+function doJump(){const y=parseInt(document.getElementById("jy").value),m=parseInt(document.getElementById("jm").value);if(y>=622&&y<=2100&&m>=1&&m<=12){cY=y;cM=m;load().then(()=>{window.scrollTo(0,0)});closeJump()}else{alert("年份: 622–2100, 月份: 1–12")}}
 // 移动端 Tab & 滑动
 let _activeTab=0;
 function switchTab(n){
