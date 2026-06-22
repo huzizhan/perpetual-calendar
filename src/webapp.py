@@ -38,6 +38,16 @@ PAGE_HTML = r"""<!DOCTYPE html>
 <html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"><title>万年历</title>
 <style>
 :root{--bg:#1e1e2e;--surface:#2a2a3a;--header-bg:#313244;--text:#cdd6f4;--text-dim:#6c7086;--accent:#89b4fa;--accent2:#cba6f7;--islamic:#fab387;--jp:#f38ba8;--buddha:#f9e2af;--red:#f38ba8;--yellow:#f9e2af;--green:#a6e3a1;--teal:#94e2d5;--radius:10px;--transition:0.2s ease}
+body.light{--bg:#f5f0eb;--surface:#fff;--header-bg:#f0ebe3;--text:#2c2c2c;--text-dim:#8c8c8c;--accent:#5b8def;--accent2:#7c3aed;--islamic:#d97706;--jp:#e11d48;--buddha:#b45309;--red:#e11d48;--yellow:#b45309;--green:#059669;--teal:#0d9488}
+body.light .cell{background:var(--surface);border:1px solid rgba(0,0,0,0.06)}
+body.light .cell.today{background:var(--accent)!important}
+body.light .cell.today .solar,body.light .cell.today .lunar,body.light .cell.today .tag{color:#fff!important}
+body.light .cell.empty{background:transparent;border:none}
+body.light .cal-toggle button,body.light .quick-btn{border-color:rgba(0,0,0,0.1)}
+body.light .festival-panel,body.light .almanac-panel,body.light dialog{background:var(--surface);box-shadow:0 8px 32px rgba(0,0,0,0.1)}
+body.light .bottom-nav{border-top-color:rgba(0,0,0,0.08)}
+.theme-btn{position:fixed;top:12px;right:12px;z-index:200;width:32px;height:32px;border-radius:50%;border:1px solid rgba(255,255,255,0.15);background:var(--header-bg);color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:var(--transition)}
+body.light .theme-btn{border-color:rgba(0,0,0,0.1)}
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;justify-content:center;align-items:center;padding:20px}
 .container{width:100%;max-width:820px;background:var(--surface);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.4);overflow:hidden}
@@ -162,7 +172,7 @@ body{padding:0;align-items:flex-start}
 <meta name="apple-mobile-web-app-title" content="万年历">
 <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
 <link rel="apple-touch-icon" sizes="512x512" href="/static/icons/icon-512.png">
-</head><body>
+</head><body><button class="theme-btn" id="themeBtn" onclick="toggleTheme()" title="切换主题">🌙</button>
 <div class="container">
 <div class="header">
 <button class="nav-btn" onclick="prevMonth()">◀</button>
@@ -309,6 +319,9 @@ document.addEventListener('touchend',e=>{
   if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>40){if(dx>0)prevMonth();else nextMonth()}
 },{passive:true});
 document.addEventListener("keydown",e=>{if(e.target.tagName==="INPUT")return;switch(e.key){case"ArrowLeft":prevMonth();break;case"ArrowRight":nextMonth();break;case"ArrowUp":prevYear();break;case"ArrowDown":nextYear();break;case"t":case"T":goToday();break;case"g":case"G":jumpDialog();break;case"1":switchCal(0);break;case"2":switchCal(1);break;case"3":switchCal(2);break;case"4":switchCal(3);break}});
+// 主题切换
+(function(){if(localStorage.getItem('theme')==='light'){document.body.classList.add('light');document.getElementById('themeBtn').textContent='☀️'}})();
+function toggleTheme(){const b=document.body;b.classList.toggle('light');const isLight=b.classList.contains('light');localStorage.setItem('theme',isLight?'light':'dark');document.getElementById('themeBtn').textContent=isLight?'☀️':'🌙'}
 // PWA: register service worker
 if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').then(r=>console.log('[PWA] SW registered')).catch(e=>console.log('[PWA] SW failed',e))}
 load();
