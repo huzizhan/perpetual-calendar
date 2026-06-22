@@ -126,7 +126,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Micr
 .ap-tag-ji{background:rgba(243,139,168,0.15);color:var(--red)}
 .ap-tag-shen{background:rgba(250,179,135,0.15);color:var(--orange)}
 .ap-tag-xiong{background:rgba(166,173,200,0.12);color:var(--text-dim)}
-.ap-chong{font-size:12px;color:var(--red);font-weight:600}
+.ap-chong{font-size:12px;color:var(--red);font-weight:600}.converter-panel .cv-row{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg);border-radius:8px;font-size:13px}
+.converter-panel .cv-icon{font-size:18px;width:28px;text-align:center}
+.converter-panel .cv-name{font-weight:600;min-width:48px;color:var(--accent2)}
+.converter-panel .cv-value{flex:1;color:var(--text)}
+.converter-panel .cv-detail{font-size:11px;color:var(--text-dim)}
 /* 移动端 */
 .bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--header-bg);border-top:1px solid rgba(255,255,255,0.08);z-index:100;padding:6px 0 env(safe-area-inset-bottom)}
 .bottom-nav .bn-tabs{display:flex;justify-content:space-around}
@@ -211,7 +215,13 @@ body{padding:0;align-items:flex-start}
   <div class="ap-row"><span class="ap-label">吉</span><div class="ap-tags" id="ap-jishen"></div></div>
   <div class="ap-row"><span class="ap-label">凶</span><div class="ap-tags" id="ap-xiongshen"></div></div>
 </div>
-<div class="bottom-nav"><div class="bn-tabs"><button class="bn-tab active" onclick="switchTab(0)"><span class="bn-icon">📅</span>日历</button><button class="bn-tab" onclick="switchTab(1)"><span class="bn-icon">🎉</span>节日</button><button class="bn-tab" onclick="switchTab(2)"><span class="bn-icon">🧿</span>黄历</button></div></div>
+<div class="converter-panel" id="cp" style="display:none;margin:12px 14px;padding:16px 18px;background:var(--header-bg);border-radius:12px">
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+    <input type="date" id="cv-date" style="flex:1;min-width:140px;padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:var(--bg);color:var(--text);font-size:15px" onchange="doConvert()">
+    <button onclick="doConvert()" style="padding:8px 16px;border-radius:8px;border:none;background:var(--accent);color:#1e1e2e;font-weight:600;font-size:13px;cursor:pointer">转换</button>
+  </div>
+  <div id="cv-results" style="display:grid;gap:8px"></div>
+</div><div class="bottom-nav"><div class="bn-tabs"><button class="bn-tab active" onclick="switchTab(0)"><span class="bn-icon">📅</span>日历</button><button class="bn-tab" onclick="switchTab(1)"><span class="bn-icon">🎉</span>节日</button><button class="bn-tab" onclick="switchTab(2)"><span class="bn-icon">🧿</span>黄历</button><button class="bn-tab" onclick="switchTab(3)"><span class="bn-icon">🔄</span>转换</button></div></div>
 <div class="footer"><span class="hint">←→翻月 ↑↓翻年 1-4切历法 T今天 G跳转</span><span class="today-info" id="ti"></span></div>
 <dialog id="jd" style="border:none;border-radius:14px;padding:24px 28px;background:var(--header-bg);color:var(--text);box-shadow:0 20px 60px rgba(0,0,0,0.5);min-width:250px">
 <div style="font-size:16px;font-weight:700;margin-bottom:14px;text-align:center">跳转到</div>
@@ -310,7 +320,8 @@ function switchTab(n){
   const fp=document.getElementById('fp'),ap=document.getElementById('ap'),grid=document.getElementById('g');
   if(n===0){fp.classList.remove('show');ap.classList.remove('show');grid.style.display=''}
   else if(n===1){ap.classList.remove('show');if(_festivals.length)fp.classList.add('show');grid.style.display='none'}
-  else if(n===2){fp.classList.remove('show');if(_todayAlmanac)ap.classList.add('show');grid.style.display='none'}
+  else if(n===2){fp.classList.remove('show');if(_todayAlmanac)ap.classList.add('show');grid.style.display='none';document.getElementById('cp').style.display='none'}
+  else if(n===3){fp.classList.remove('show');ap.classList.remove('show');grid.style.display='none';document.getElementById('cp').style.display='block'}
 }
 let _tSX=0,_tSY=0;
 document.addEventListener('touchstart',e=>{_tSX=e.touches[0].clientX;_tSY=e.touches[0].clientY},{passive:true});
@@ -322,6 +333,16 @@ document.addEventListener("keydown",e=>{if(e.target.tagName==="INPUT")return;swi
 // 主题切换
 (function(){if(localStorage.getItem('theme')==='light'){document.body.classList.add('light');document.getElementById('themeBtn').textContent='☀️'}})();
 function toggleTheme(){const b=document.body;b.classList.toggle('light');const isLight=b.classList.contains('light');localStorage.setItem('theme',isLight?'light':'dark');document.getElementById('themeBtn').textContent=isLight?'☀️':'🌙'}
+
+// 跨历法转换
+async function doConvert(){
+  const v=document.getElementById('cv-date').value;
+  if(!v)return;
+  const r=await fetch('/api/convert?date='+v),d=await r.json();
+  const el=document.getElementById('cv-results');
+  el.innerHTML=d.calendars.map(c=>'<div class="cv-row"><span class="cv-icon">'+c.icon+'</span><span class="cv-name">'+c.name+'</span><span class="cv-value">'+c.value+'</span><span class="cv-detail">'+c.detail+'</span></div>').join('');
+}
+document.addEventListener('DOMContentLoaded',()=>{const inp=document.getElementById('cv-date');if(inp)inp.value=new Date().toISOString().split('T')[0]});
 // PWA: register service worker
 if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').then(r=>console.log('[PWA] SW registered')).catch(e=>console.log('[PWA] SW failed',e))}
 load();
@@ -453,6 +474,36 @@ def static_files(filename):
     """静态资源：图标、manifest 等"""
     return send_from_directory(_STATIC_DIR, filename)
 
+
+# ─── 跨历法转换 API ────────────────────────────────────
+
+@app.route("/api/convert")
+def api_convert():
+    try:
+        date_str = request.args.get("date", "")
+        parts = date_str.split("-")
+        year, month, day = int(parts[0]), int(parts[1]), int(parts[2])
+    except (ValueError, IndexError, TypeError):
+        return jsonify({"error": "日期格式错误 (YYYY-MM-DD)"}), 400
+
+    ld = solar_to_lunar(year, month, day)
+    lunar_val = f"{'闰' if ld.is_leap else ''}{['正','二','三','四','五','六','七','八','九','十','冬','腊'][ld.month-1]}月{LUNAR_DAY_NAMES[ld.day-1]}"
+    idate = gregorian_to_islamic(year, month, day)
+    islamic_val = f"{idate.year} AH  {ISLAMIC_MONTH_NAMES_CN[idate.month-1]} {idate.day}日"
+    jd = gregorian_to_japanese(year, month, day)
+    japanese_val = str(jd)
+    bd = gregorian_to_buddhist(year, month, day)
+    buddhist_val = f"BE {bd.year}  {thai_month_name(month)} {day}日"
+
+    return jsonify({
+        "date": date_str,
+        "calendars": [
+            {"icon": "🇨🇳", "name": "农历", "value": lunar_val, "detail": f"{year_sexagenary(year)}年"},
+            {"icon": "🌙", "name": "伊斯兰", "value": islamic_val, "detail": "希吉来历"},
+            {"icon": "🇯🇵", "name": "和历", "value": japanese_val, "detail": f"{month_wareki_name(month)}"},
+            {"icon": "🛕", "name": "佛历", "value": buddhist_val, "detail": "泰国佛历"},
+        ]
+    })
 
 # ─── 页面 & API ──────────────────────────────────────────
 
