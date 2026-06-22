@@ -35,7 +35,7 @@ logging.basicConfig(level=logging.INFO)
 app = Flask(__name__, static_folder=None)  # 禁用默认静态，用自定义路由
 
 PAGE_HTML = r"""<!DOCTYPE html>
-<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>万年历</title>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"><title>万年历</title>
 <style>
 :root{--bg:#1e1e2e;--surface:#2a2a3a;--header-bg:#313244;--text:#cdd6f4;--text-dim:#6c7086;--accent:#89b4fa;--accent2:#cba6f7;--islamic:#fab387;--jp:#f38ba8;--buddha:#f9e2af;--red:#f38ba8;--yellow:#f9e2af;--green:#a6e3a1;--teal:#94e2d5;--radius:10px;--transition:0.2s ease}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -205,8 +205,8 @@ body{padding:0;align-items:flex-start}
 <div class="footer"><span class="hint">←→翻月 ↑↓翻年 1-4切历法 T今天 G跳转</span><span class="today-info" id="ti"></span></div>
 <dialog id="jd" style="border:none;border-radius:14px;padding:24px 28px;background:var(--header-bg);color:var(--text);box-shadow:0 20px 60px rgba(0,0,0,0.5);min-width:250px">
 <div style="font-size:16px;font-weight:700;margin-bottom:14px;text-align:center">跳转到</div>
-<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><label style="width:22px">年</label><input id="jy" type="number" min="622" max="2100" style="flex:1;padding:7px 10px;border-radius:7px;border:1px solid rgba(255,255,255,0.2);background:var(--bg);color:var(--text);font-size:14px;text-align:center"></div>
-<div style="display:flex;gap:8px;align-items:center;margin-bottom:14px"><label style="width:22px">月</label><input id="jm" type="number" min="1" max="12" style="flex:1;padding:7px 10px;border-radius:7px;border:1px solid rgba(255,255,255,0.2);background:var(--bg);color:var(--text);font-size:14px;text-align:center"></div>
+<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><label style="width:22px">年</label><input id="jy" type="number" min="622" max="2100" style="flex:1;padding:7px 10px;border-radius:7px;border:1px solid rgba(255,255,255,0.2);background:var(--bg);color:var(--text);font-size:16px;text-align:center"></div>
+<div style="display:flex;gap:8px;align-items:center;margin-bottom:14px"><label style="width:22px">月</label><input id="jm" type="number" min="1" max="12" style="flex:1;padding:7px 10px;border-radius:7px;border:1px solid rgba(255,255,255,0.2);background:var(--bg);color:var(--text);font-size:16px;text-align:center"></div>
 <div style="display:flex;gap:8px;justify-content:flex-end"><button onclick="closeJump()" style="padding:7px 16px;border-radius:7px;border:1px solid rgba(255,255,255,0.2);background:transparent;color:var(--text);cursor:pointer;font-size:13px">取消</button><button onclick="doJump()" style="padding:7px 16px;border-radius:7px;border:none;background:var(--accent);color:#1e1e2e;font-weight:600;cursor:pointer;font-size:13px">跳转</button></div>
 </dialog>
 </div>
